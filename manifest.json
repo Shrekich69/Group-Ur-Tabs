@@ -1,0 +1,37 @@
+{
+    "manifest_version": 2,
+    "name": "GroupUrTabs",
+    "version": "0.1.0",
+
+    "author": "Shrekich",
+    "description": "Better groups control.",
+    
+    "browser_action": {
+        "default_title": "GroupUrTabs"
+    },
+    "background": {
+        "scripts": [
+
+        ],
+        "persistent": false
+    },
+
+    "browser_specific_settings": {
+        "gecko": {
+            "id": "",
+            "data_collection_permissions": {
+                "required": [
+                    "none"
+                ]
+            }
+        }
+    },
+
+    "permissions": [
+        "activeTab",
+        "tabs",
+        "tabGroups",
+        "storage",
+        "sessions"
+    ]
+}
