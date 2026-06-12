@@ -1,17 +1,17 @@
 {
     "manifest_version": 2,
-    "name": "GroupUrTabs",
+    "name": "Group Ur Tabs",
     "version": "0.1.0",
 
     "author": "Shrekich",
     "description": "Better groups control.",
     
     "browser_action": {
-        "default_title": "GroupUrTabs"
+        "default_title": "Group Ur Tabs"
     },
     "background": {
         "scripts": [
-
+            "scripts/grouper.js"
         ],
         "persistent": false
     },
