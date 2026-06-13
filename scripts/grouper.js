@@ -18,31 +18,38 @@ class Group {
 class Grouper {
 
    grouping = true;
-   groups = new Array(Group);
+   groups = new Array;
 
    /**
     * Adds already existing groups into the array
     */
-   async constructor() {
-      const exGroups = await browser.tabGroups.query({});
-      if (exGroups.length !== 0)
+   constructor(groups) {
+      this.groups = groups;
+   }
+   
+   static async create() {
+      const exis_groups = await browser.tabGroups.query({});
+      let groups = new Array;
+      if (exis_groups.length !== 0)
       {
-         for (let i = 0; i < exGroups.length; i++)
+         for (const exis_group of exis_groups)
          {
             let newGroup = new Group;
 
-            newGroup.collapsed = exGroups[i].collapsed;
-            newGroup.color = exGroups[i].color;
-            newGroup.id = exGroups[i].id;
-            newGroup.title = exGroups[i].title;
+            newGroup.collapsed = exis_group.collapsed;
+            newGroup.color = exis_group.color;
+            newGroup.id = exis_group.id;
+            newGroup.title = exis_group.title;
 
-            const tabsInGroup = await browser.tabs.query({ groupId: exGroups[i].id });
-            newGroup.domain = ParseUrl(tabsInGroup[0].url);
+            const tabsInGroup = await browser.tabs.query({ groupId: exis_group.id });
+            newGroup.domain = Grouper.ParseUrl(tabsInGroup[0].url);
             newGroup.amount = tabsInGroup.length;
 
-            this.groups.push(newGroup);
+            groups.push(newGroup);
          }
       }
+      
+      return new Grouper(groups);
    }
 
    /**
@@ -90,23 +97,22 @@ class Grouper {
 
          // Check if groups with the same domain are extendable and group if it is
          let skip = false;
+         if (this.groups.length > 0)
          for (let group of this.groups) {
             
-            if (ParseUrl(tab.url) === group.domain) {
+            if (Grouper.ParseUrl(tab.url) === group.domain) {
                // Check if the group is able to extend
                if (!group.extendable) {
                   skip = true;
                }
                // Group already existing group with the tab
-               else {
+               else if (this.groups.length > 0) {
                   // Get tabs ids in the group, then push tab id to the other ids
-                  let tabsIds = tabs.map(tab => {
-                     if (tab.groupId = group.id)
-                        return tab.id;
-                  });
-                  tabsIds.push(tab.id);
+                  let tabIds = await browser.tabs.query({ groupId: group.id });
+                  tabIds = tabIds.map(tab => tab.id);
+                  tabIds.push(tab.id);
 
-                  await browser.tabs.group({ groupId: group.id, tabsIds: tabsIds });
+                  await browser.tabs.group({ groupId: group.id, tabIds: tabIds });
                   group.amount += 1;
 
                   skip = true;
@@ -121,17 +127,24 @@ class Grouper {
          let sameDomainTabs = []; // Array of ids
 
          for ( const tab2 of tabs ) {
-            if ( ParseUrl(tab2.url) === ParseUrl(tab.url) && tab2.pinned === false ) {
+            if (Grouper.ParseUrl(tab2.url) === Grouper.ParseUrl(tab.url) && tab2.pinned === false) {
                sameDomainTabs.push(tab2.id);
             }
             else {
                continue;
             }
-         }
+         } if (sameDomainTabs.length === 0) continue;
          
-         if (sameDomainTabs.length > 0) {
-            const newGroupId = await browser.tabs.group({ tabsIds: sameDomainTabs });
-            browser.tabGroups.update(newGroupId, { title: ParseUrl(tab.url) });
+         if (sameDomainTabs.length > 1) {
+            const newGroupId = await browser.tabs.group({ tabIds: sameDomainTabs });
+            browser.tabGroups.update(newGroupId, { title: Grouper.ParseUrl(tab.url) });
+
+            let newGroup = new Group;
+            newGroup.id = newGroupId;
+            newGroup.title = Grouper.ParseUrl(tab.url);
+            newGroup.domain = newGroup.title;
+            newGroup.amount = sameDomainTabs.length;
+            this.groups.push(newGroup);
          }
 
       }
