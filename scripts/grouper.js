@@ -5,14 +5,14 @@
  */
 class Group {
    collapsed = false;
-   color = "grey";
+   color = "blue";
    id = -1;
    title = "";
 
    extendable = true;
    domain = "";
    // amount of tabs
-   amount = 0;
+   tabIds = [];
 }
 
 class Grouper {
@@ -43,7 +43,7 @@ class Grouper {
 
             const tabsInGroup = await browser.tabs.query({ groupId: exis_group.id });
             newGroup.domain = Grouper.ParseUrl(tabsInGroup[0].url);
-            newGroup.amount = tabsInGroup.length;
+            newGroup.tabIds = tabsInGroup.map(tab => tab.id);
 
             groups.push(newGroup);
          }
@@ -106,14 +106,11 @@ class Grouper {
                   skip = true;
                }
                // Group already existing group with the tab
-               else if (this.groups.length > 0) {
-                  // Get tabs ids in the group, then push tab id to the other ids
-                  let tabIds = await browser.tabs.query({ groupId: group.id });
-                  tabIds = tabIds.map(tab => tab.id);
-                  tabIds.push(tab.id);
+               else {
+                  if (!group.tabIds.includes(tab.id))
+                     group.tabIds.push(tab.id);
 
-                  await browser.tabs.group({ groupId: group.id, tabIds: tabIds });
-                  group.amount += 1;
+                  await browser.tabs.group({ groupId: group.id, tabIds: group.tabIds });
 
                   skip = true;
                }
@@ -137,17 +134,38 @@ class Grouper {
          
          if (sameDomainTabs.length > 1) {
             const newGroupId = await browser.tabs.group({ tabIds: sameDomainTabs });
-            browser.tabGroups.update(newGroupId, { title: Grouper.ParseUrl(tab.url) });
+            browser.tabGroups.update(newGroupId, {
+               title: Grouper.ParseUrl(tab.url)
+            });
 
             let newGroup = new Group;
             newGroup.id = newGroupId;
             newGroup.title = Grouper.ParseUrl(tab.url);
             newGroup.domain = newGroup.title;
-            newGroup.amount = sameDomainTabs.length;
+            newGroup.tabIds = sameDomainTabs;
             this.groups.push(newGroup);
          }
 
       }
+   }
+
+   /**
+    * @param {number} id id of the group
+    * @param {number} ungroup_or_remove 0 means delete from array, 1 means ungroup tabs and delete from array, 2 means remove tabs and delete from array
+    */
+   async DeleteGroup(id, ungroup_or_remove) {
+      let newGroups = new Array;
+      for (const group of this.groups) {
+         if (group.id === id) {
+            if (ungroup_or_remove === 1)
+               await browser.tabs.ungroup(group.tabIds);
+            else if (ungroup_or_remove === 2)
+               await browser.tabs.remove(group.tabIds);
+            continue;
+         }
+         newGroups.push(group);
+      }
+      this.groups = newGroups;
    }
 
 }
